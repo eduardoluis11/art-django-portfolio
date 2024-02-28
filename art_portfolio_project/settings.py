@@ -38,18 +38,34 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # El Estado del DEBUG también lo voy a guardar en una variable de entorno
 DEBUG = os.environ.get('DEBUG')
 
-ALLOWED_HOSTS = []
+""" URLs permitidas para entrar a la web app.
+
+Esto es OBLIGATORIO si quiero poner la web app en producción.
+
+Puse que permito todo tipo de URLs para así evitar bugs al momento de usar esta web app usando "runserver" al subirlo a 
+Amazon AWS. 
+"""
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
+""" I need to add the "art_dashboard_app" app to the list of installed apps.
+"""
 INSTALLED_APPS = [
+    'art_dashboard_app', # App de Dashboard
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'csvexport',  # Esto me permite Exportar la Base de Datos como archivo CSV
+    'import_export',  # Esto me permite Exportar cada modelo de la Base de Datos como archivo CSV
+    'django.contrib.humanize',  # Esto me dejará poner "." para separar números mayores de 1000
+    'storages',  # Esto es para que Amazon EC2 detecte el S3 bucket para detectar la carpeta "static"
+    'rest_framework',
+    'sslserver',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +110,14 @@ DATABASES = {
 }
 
 
+""" Esto me dejará usar el modelo "User" para poder agarrar los datos de los usuarios del modelo en donde se guardan
+los datos de los usuarios registrados por defecto en Django.
+
+Tengo que editarlo, ya que quiero que NO se puedan repetir los emails. Es decir, quiero que 2 usuarios distintos no
+puedan usar el mismo email.
+"""
+AUTH_USER_MODEL = 'art_dashboard_app.CustomUser'
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -124,13 +148,49 @@ USE_I18N = True
 
 USE_TZ = True
 
+""" Separador de Miles.
+
+Esto me dejará poner un punto para leer más fácilmente los números que sean mayores a mil (fuente: 
+https://runebook.dev/es/docs/django/ref/settings#std-setting-USE_THOUSAND_SEPARATOR).
+"""
+USE_THOUSAND_SEPARATOR = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
+# Necesito meter todos los archivos de la carpeta "static" en la carpeta raíz de todo el proyecto para que el CSS y el
+# JS se puedan ejecutar en Amazon AWS. Por lo tanto, tendré que hacer una carpeta "static" en la carpeta raíz usando
+# "collectstatic".
+STATIC_ROOT = os.path.join(BASE_DIR, '/static')
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+""" Para subir archivos e imágenes, voy a tener 
+que configurar varias cosas en mi proyecto de Django. Primero, tendré que ir a settings.py, y agregar unas líneas que 
+digan MEDIA ROOT, y MEDIA URL. Aquí puedo ver mas instrucciones sobre como hacerlo: 
+https://www.youtube.com/watch?v=ygzGr51dbsY . 
+"""
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+""" Datos de los Emails para enviar correos electrónicos desde Django.
+
+Solo puedo usar "EMAIL_USE_SSL" o "EMAIL_USE_TLS" en el .env, PERO NO los 2 al mismo tiempo. Sino, me dará un bug
+de Django.
+"""
+# Email Principal
+EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS') # Direccion de Email de
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')   # Contraseña del Email
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_HOST_USER = EMAIL_ADDRESS
+EMAIL_HOST_PASSWORD = EMAIL_PASSWORD
